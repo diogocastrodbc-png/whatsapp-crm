@@ -14,7 +14,7 @@ webhookRouter.post('/zapi', async (req, res) => {
 
   const body = req.body as Record<string, any>;
   const { type, instanceId } = body;
-  console.log('[webhook:zapi] received type=%s instanceId=%s phone=%s', type, instanceId, body.phone ?? '-');
+  console.log('[webhook:zapi]', JSON.stringify({ type, instanceId, phone: body.phone, isGroup: body.isGroup }).substring(0, 300));
 
   try {
     // Connection status events
@@ -55,7 +55,8 @@ webhookRouter.post('/zapi', async (req, res) => {
 });
 
 async function handleInboundMessage(data: Record<string, any>) {
-  const phone: string | undefined = data.phone;
+  // Strip @c.us / @s.whatsapp.net suffixes some Z-API versions append
+  const phone: string | undefined = data.phone?.replace(/@\S+$/, '').trim();
   if (!phone) return;
 
   const pushName: string | undefined = data.senderName ?? data.chatName ?? undefined;

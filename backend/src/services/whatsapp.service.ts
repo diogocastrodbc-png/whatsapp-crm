@@ -29,11 +29,19 @@ export class WhatsAppService {
       await prisma.whatsAppSession.update({ where: { sessionId }, data: { status } });
     }
 
-    // Register webhook so Z-API sends incoming messages to us
-    try {
-      await zapi.setWebhookReceived(webhookUrl());
-    } catch (err) {
-      console.warn('[WhatsAppService] Could not set Z-API webhook:', (err as Error).message);
+    // Register webhook only when WEBHOOK_BASE_URL is a real public URL.
+    // Skipping on localhost prevents overwriting a correct URL already set
+    // in Z-API dashboard every time the server restarts in dev.
+    const url = webhookUrl();
+    if (!url.includes('localhost') && !url.includes('127.0.0.1')) {
+      try {
+        await zapi.setWebhookReceived(url);
+        console.log('[WhatsAppService] Webhook registered:', url);
+      } catch (err) {
+        console.warn('[WhatsAppService] Could not set Z-API webhook:', (err as Error).message);
+      }
+    } else {
+      console.log('[WhatsAppService] Skipping webhook registration (non-public URL):', url);
     }
   }
 
@@ -43,12 +51,6 @@ export class WhatsAppService {
       update: {},
       create: { sessionId },
     });
-    // Register webhook in case it wasn't set yet
-    try {
-      await zapi.setWebhookReceived(webhookUrl());
-    } catch (err) {
-      console.warn('[WhatsAppService] Could not set Z-API webhook:', (err as Error).message);
-    }
   }
 
   static async sendMessage(conversationId: string, content: string) {
