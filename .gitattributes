@@ -1,0 +1,3 @@
+# Normalize line endings to LF on checkout (important for Linux/Railway deploy)
+* text=auto eol=lf
+*.sh text eol=lf

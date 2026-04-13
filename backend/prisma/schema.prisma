@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      Role     @default(AGENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversations Conversation[]
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tags          ContactTag[]
+  conversations Conversation[]
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  color String @default("#6366f1")
+
+  contacts ContactTag[]
+}
+
+model ContactTag {
+  contactId String
+  tagId     String
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+}
+
+model PipelineStage {
+  id    String @id @default(cuid())
+  name  String
+  order Int
+  color String @default("#6366f1")
+
+  conversations Conversation[]
+}
+
+model Conversation {
+  id              String             @id @default(cuid())
+  contactId       String
+  status          ConversationStatus @default(OPEN)
+  assignedToId    String?
+  pipelineStageId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  contact       Contact        @relation(fields: [contactId], references: [id])
+  assignedTo    User?          @relation(fields: [assignedToId], references: [id])
+  pipelineStage PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  messages      Message[]
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  RESOLVED
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  waMessageId    String?     @unique
+  content        String
+  type           MessageType @default(TEXT)
+  direction      Direction
+  timestamp      DateTime
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  STICKER
+  LOCATION
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+model WhatsAppSession {
+  id        String        @id @default(cuid())
+  sessionId String        @unique
+  status    SessionStatus @default(DISCONNECTED)
+  qrCode    String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum SessionStatus {
+  CONNECTED
+  DISCONNECTED
+  QR_PENDING
+}
