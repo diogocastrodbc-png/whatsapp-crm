@@ -4,7 +4,10 @@ const BASE = `${env.ZAPI_BASE_URL}/instances/${env.ZAPI_INSTANCE_ID}/token/${env
 
 async function zapi<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Client-Token': env.ZAPI_TOKEN,
+    },
     ...options,
   });
   if (!res.ok) {
@@ -26,7 +29,9 @@ export async function getConnectionStatus() {
 }
 
 export async function getQrCode(): Promise<{ value: string }> {
-  const res = await fetch(`${BASE}/qr-code/image`);
+  const res = await fetch(`${BASE}/qr-code/image`, {
+    headers: { 'Client-Token': env.ZAPI_TOKEN },
+  });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Z-API ${res.status}: ${text}`);
