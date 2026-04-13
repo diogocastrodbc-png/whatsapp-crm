@@ -14,6 +14,7 @@ webhookRouter.post('/zapi', async (req, res) => {
 
   const body = req.body as Record<string, any>;
   const { type, instanceId } = body;
+  console.log('[webhook:zapi] received type=%s instanceId=%s phone=%s', type, instanceId, body.phone ?? '-');
 
   try {
     // Connection status events
