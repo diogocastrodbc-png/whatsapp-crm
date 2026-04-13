@@ -13,8 +13,9 @@ async function main() {
   setIO(io);
   await WhatsAppService.init();
 
-  httpServer.listen(env.PORT, () => {
-    console.log(`Server running on http://localhost:${env.PORT}`);
+  const port = process.env.PORT || env.PORT;
+  httpServer.listen(port, () => {
+    console.log(`Server running on port ${port}`);
   });
 }
 
