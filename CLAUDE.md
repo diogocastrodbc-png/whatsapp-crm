@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 WhatsApp CRM — a monorepo with two workspaces:
-- `backend/` — Node.js + TypeScript + Express + Baileys + Prisma (PostgreSQL)
+- `backend/` — Node.js + TypeScript + Express + Z-API + Prisma (PostgreSQL)
 - `frontend/` — Next.js 15 (App Router) + Tailwind CSS
 
 ## Commands
@@ -47,12 +47,11 @@ Request flow: `index.ts` → `api/server.ts` (Express) → `api/routes/` → `se
 - `lib/prisma.ts` — shared Prisma client
 - `lib/io.ts` — Socket.io server instance; call `setIO()` at startup, `getIO()` anywhere
 
-**Baileys (WhatsApp) layer (`baileys/`):**
-- `client.ts` — manages multiple `WASocket` instances keyed by `sessionId`, handles reconnect logic. Auth state is persisted to `.baileys-auth/<sessionId>/`.
-- `handlers.ts` — processes incoming `messages.upsert` events: upserts contacts, creates/finds open conversations, saves messages, emits `message:new` via Socket.io.
+**Z-API layer (`zapi/`):**
+- `client.ts` — HTTP client for the Z-API SaaS gateway. Reads `ZAPI_INSTANCE_ID`, `ZAPI_TOKEN` (path), and `ZAPI_CLIENT_TOKEN` (header) from env. Exports `sendTextMessage`, `getConnectionStatus`, `getQrCode`, `setWebhookReceived`.
 
 **Services:**
-- `WhatsAppService` — static class; `init()` restores sessions from DB on startup, `createSession()` starts a new Baileys connection, `sendMessage()` sends via the first active socket and saves the outbound message.
+- `WhatsAppService` — static class; `init()` checks Z-API connection status on startup and registers the webhook URL (only when `WEBHOOK_BASE_URL` is not localhost), `sendMessage()` calls `zapi.sendTextMessage` and saves the outbound message.
 - `ContactService` / `ConversationService` — thin Prisma wrappers.
 
 **Socket.io events emitted by the backend:**
@@ -74,7 +73,7 @@ Uses Next.js App Router. Pages under `app/` are Server Components by default; in
 
 Core models: `Contact` (phone unique) → `Conversation` (status: OPEN/PENDING/RESOLVED) → `Message` (direction: INBOUND/OUTBOUND). Supporting: `Tag`, `ContactTag`, `PipelineStage`, `User`, `WhatsAppSession`.
 
-When a message arrives, Baileys upserts a `Contact` by phone, finds or creates an OPEN `Conversation`, then creates the `Message`. This means one open conversation per contact at a time.
+When a message arrives via webhook, the handler upserts a `Contact` by phone, finds or creates an OPEN `Conversation`, then creates the `Message`. This means one open conversation per contact at a time.
 
 ## First-Time Setup
 
@@ -87,10 +86,11 @@ npm run db:migrate    # name it "init"
 npm run dev
 ```
 
-Then visit Settings → add a session → scan the QR code in WhatsApp.
+Then visit Settings → scan the QR code via **app.z-api.io** → click "Atualizar Status".
 
 ## Important Notes
 
-- Baileys is an unofficial WhatsApp Web client. Sessions are stored locally in `.baileys-auth/` (gitignored). If the QR is needed again, delete that folder and reconnect.
-- The `SessionManager` component shows raw QR strings. Install `qrcode.react` and replace the `<pre>` block to render a scannable QR image.
+- **WhatsApp connection is managed via Z-API** — not a local Baileys process. Go to [app.z-api.io](https://app.z-api.io), open your instance, and scan the QR code there. The backend tracks status via webhook callbacks (`ConnectedCallback` / `DisconnectedCallback`).
+- **`ZAPI_CLIENT_TOKEN`** is the Security Token found in `app.z-api.io → sua instância → Settings → Security`. It is **different** from `ZAPI_TOKEN` (which is the instance token in the URL path). The client token is sent as the `Client-Token` HTTP header on every request.
+- **Webhooks in local development**: Z-API cannot reach `localhost`. Use [ngrok](https://ngrok.com) or similar to expose the backend and set `WEBHOOK_BASE_URL` to the public URL. The backend skips webhook registration automatically when the URL is localhost.
 - All routes are unauthenticated. Add auth middleware in `backend/src/api/server.ts` before production use.

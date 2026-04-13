@@ -6,7 +6,7 @@ async function zapi<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
-      'Client-Token': env.ZAPI_TOKEN,
+      'Client-Token': env.ZAPI_CLIENT_TOKEN,
     },
     ...options,
   });
@@ -30,7 +30,7 @@ export async function getConnectionStatus() {
 
 export async function getQrCode(): Promise<{ value: string }> {
   const res = await fetch(`${BASE}/qr-code/image`, {
-    headers: { 'Client-Token': env.ZAPI_TOKEN },
+    headers: { 'Client-Token': env.ZAPI_CLIENT_TOKEN },
   });
   if (!res.ok) {
     const text = await res.text();

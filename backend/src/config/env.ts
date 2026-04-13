@@ -9,6 +9,8 @@ const envSchema = z.object({
   ZAPI_BASE_URL: z.string().default('https://api.z-api.io'),
   ZAPI_INSTANCE_ID: z.string(),
   ZAPI_TOKEN: z.string(),
+  // Security Token gerado em app.z-api.io → Settings → Security
+  ZAPI_CLIENT_TOKEN: z.string(),
   // URL where Z-API can reach this backend's webhook
   WEBHOOK_BASE_URL: z.string().default('http://localhost:3001'),
 });
