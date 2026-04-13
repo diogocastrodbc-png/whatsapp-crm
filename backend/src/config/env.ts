@@ -13,4 +13,10 @@ const envSchema = z.object({
   WEBHOOK_BASE_URL: z.string().default('http://localhost:3001'),
 });
 
-export const env = envSchema.parse(process.env);
+const parsed = envSchema.safeParse(process.env);
+if (!parsed.success) {
+  console.error('[env] Missing or invalid environment variables:');
+  console.error(parsed.error.flatten().fieldErrors);
+  process.exit(1);
+}
+export const env = parsed.data;
